@@ -6,6 +6,6 @@
 #SBATCH --job-name=train_sindy_node_add
 #SBATCH --output=log/train_sindy_node_add-%j.out
 #SBATCH --error=log/train_sindy_node_add-%j.err
-#SBATCH --workdir=/home/simonwa/home/ode_test.jl/scripts
+#SBATCH --workdir=/home/simonwa/home/SymbolicNODE.jl/scripts
 
 julia train_sindy_node_add.jl ${1}
