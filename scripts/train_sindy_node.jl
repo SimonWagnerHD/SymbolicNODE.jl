@@ -32,7 +32,7 @@ sindy = SINDy(sol)
 
 using NeuralODE
 
-train_data, valid_data = generate_train_data(pendulum, 3, x0; N_t=N_t, dt=dt, t_transient=t_transient, valid_set=0.4)
+train_data, valid_data = generate_train_data(pendulum, 2, x0; N_t=N_t, dt=dt, t_transient=t_transient, valid_set=0.4)
 
 p, re_nn = NODE_ANN(4,4,16,4)
 node(u, p, t) = re_nn(p)(sindy(u))
