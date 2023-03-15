@@ -47,4 +47,4 @@ using DelimitedFiles, JLD2
 writedlm(string("../data/sindy_node_train",epochs,".csv"), train_losses, ',')
 writedlm(string("../data/sindy_node_valid",epochs,".csv"), valid_losses, ',')
 save_ANN(re_nn(model.p), string("../models/sindy_node",epochs,".bson"))
-save_object(string("../models/sindy_node_add",epochs,".jld2"), sindy)
+save_object(string("../models/sindy_node",epochs,".jld2"), sindy)
