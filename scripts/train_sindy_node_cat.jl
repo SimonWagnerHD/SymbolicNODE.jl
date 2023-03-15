@@ -42,8 +42,9 @@ model = NODE(node_prob)
 
 train_losses, valid_losses = train_NODE(model, train_data, epochs; valid_data=valid_data, η=1f-3, print_every=print_every)
 
-using DelimitedFiles
+using DelimitedFiles, JLD2
 
 writedlm(string("../data/sindy_node_cat_train",epochs,".csv"), train_losses, ',')
 writedlm(string("../data/sindy_node_cat_valid",epochs,".csv"), valid_losses, ',')
 save_ANN(re_nn(model.p), string("../models/sindy_node_cat",epochs,".bson"))
+save_object(string("../models/sindy_node_cat",epochs,".jld2"), sindy)
