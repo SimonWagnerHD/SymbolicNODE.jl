@@ -8,4 +8,4 @@
 #SBATCH --error=log/refine_node-%j.err
 #SBATCH --workdir=/home/simonwa/home/SymbolicNODE.jl/scripts
 
-julia refine_node.jl ${1} ${2}
+julia refine_node.jl $*
