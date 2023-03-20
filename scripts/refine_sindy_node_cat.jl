@@ -34,7 +34,7 @@ using NeuralODE
 train_data, valid_data = generate_train_data(pendulum, series_length, x0; N_t=N_t, dt=dt, t_transient=t_transient, valid_set=0.4)
 
 p, re_nn = load_ANN("../models/sindy_node.bson")
-node(u, p, t) = re_nn(p)(sindy(u))
+node(u, p, t) = re_nn(p)(vcat(sindy(u),u))
 node_prob = ODEProblem(node, x0, (Float32(0.),Float32(dt)), p)
 
 model = NODE(node_prob)
@@ -43,7 +43,7 @@ train_losses, valid_losses = train_NODE(model, train_data, epochs; valid_data=va
 
 using DelimitedFiles
 
-writedlm("../data/sindy_node_train.csv", train_losses, ',')
-writedlm("../data/sindy_node_valid.csv", valid_losses, ',')
-save_ANN(re_nn(model.p), "../models/sindy_node.bson")
-save_object("../models/sindy_node.jld2", sindy)
+writedlm("../data/sindy_node_cat_train.csv", train_losses, ',')
+writedlm("../data/sindy_node_cat_valid.csv", valid_losses, ',')
+save_ANN(re_nn(model.p), "../models/sindy_node_cat.bson")
+save_object("../models/sindy_node_cat.jld2", sindy)
