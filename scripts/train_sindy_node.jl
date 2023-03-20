@@ -24,8 +24,6 @@ t_transient = 0f0
 N_t = 500
 dt = 0.1f0
 
-times = t_transient:dt:t_transient + N_t * dt
-
 sol = trajectory(pendulum, x0, N_t, dt, t_transient)
 
 sindy = SINDy(sol)

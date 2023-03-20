@@ -1,27 +1,27 @@
 module SymReg
 
-export SINDy, GeneticSymReg
+export SINDy, GeneticSymReg, save_sindy, load_sindy
 
 using OrdinaryDiffEq
 using DataDrivenDiffEq, DataDrivenSparse
 using SymbolicRegression
 using BSplineKit
 using Suppressor
+using Serialization
 
 abstract type AbstractSymRegModel end
 
-struct SINDy{P,S} <: AbstractSymRegModel
-    prob::P
+struct SINDy{S} <: AbstractSymRegModel
     sol::S
 end
 
-function SINDy(trajectory)
+function SINDy(trajectory::AbstractArray)
     @variables t, (x(t))[1:size(trajectory)[1]]
     ddprob = DataDrivenProblem(trajectory)
     basis = Basis([polynomial_basis(x, 3); sin_basis(x,1); cos_basis(x,1)], x, iv = t)
     optimiser = STLSQ(Float32.(exp10.(-5:0.1:-1)))
     ddsol = solve(ddprob, basis, optimiser, options = DataDrivenCommonOptions(digits = 1))
-    SINDy{typeof(ddprob), typeof(ddsol)}(ddprob, ddsol)
+    SINDy{typeof(ddsol)}(ddsol)
 end
 
 function (m::SINDy)(u,p,t)
@@ -30,6 +30,17 @@ end
 
 function (m::SINDy)(u)
     m.sol(u,m.sol.prob.p,0)
+end
+
+
+#Custom save and load functions for SINDy object using Serialization.jl as plain BSON and JLD2 solutions do not work properly
+function save_sindy(m::SINDy, filename)
+    serialize(filename, m)
+    nothing
+end
+
+function load_sindy(filename)
+    deserialize(filename)
 end
 
 #Estimate time derivative of a trajectory which is only measured at some points in time
