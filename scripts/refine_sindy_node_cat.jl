@@ -25,9 +25,7 @@ t_transient = 0f0
 N_t = 500
 dt = 0.1f0
 
-using JLD2
-
-sindy = load_object(string("../models/sindy_node.jld2"))
+sindy = load_sindy("../models/sindy_node.ser")
 
 using NeuralODE
 
@@ -46,4 +44,3 @@ using DelimitedFiles
 writedlm("../data/sindy_node_cat_train.csv", train_losses, ',')
 writedlm("../data/sindy_node_cat_valid.csv", valid_losses, ',')
 save_ANN(re_nn(model.p), "../models/sindy_node_cat.bson")
-save_object("../models/sindy_node_cat.jld2", sindy)
