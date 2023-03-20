@@ -65,6 +65,7 @@ function save_ANN(model, filename)
 end
 
 function load_ANN(filename)
+    Core.eval(Main, :(import NNlib, Flux))
     BSON.@load filename savemodel
     p, re_nn = Flux.destructure(savemodel)
 end
