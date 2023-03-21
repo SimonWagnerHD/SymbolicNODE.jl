@@ -25,13 +25,13 @@ t_transient = 0f0
 N_t = 500
 dt = 0.1f0
 
-sindy = load_sindy("../models/sindy_node.ser")
+sindy = load_sindy("../models/sindy_node_cat.ser")
 
 using NeuralODE
 
 train_data, valid_data = generate_train_data(pendulum, series_length, x0; N_t=N_t, dt=dt, t_transient=t_transient, valid_set=0.4)
 
-p, re_nn = load_ANN("../models/sindy_node.bson")
+p, re_nn = load_ANN("../models/sindy_node_cat.bson")
 node(u, p, t) = re_nn(p)(vcat(sindy(u),u))
 node_prob = ODEProblem(node, x0, (Float32(0.),Float32(dt)), p)
 
