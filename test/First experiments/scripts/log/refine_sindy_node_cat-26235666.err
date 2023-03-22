@@ -1,0 +1,3 @@
+  Activating project at `~/home/SymbolicNODE.jl`
+┌ Warning: dt(-1.9073486e-6) <= dtmin(1.9073486e-6) at t=25.299997. Aborting. There is either an error in your model specification or the true solution is unstable.
+└ @ SciMLBase ~/.julia/packages/SciMLBase/E9FrD/src/integrator_interface.jl:529

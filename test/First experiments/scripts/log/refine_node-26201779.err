@@ -1,0 +1,8 @@
+  Activating project at `~/home/SymbolicNODE.jl`
+ERROR: LoadError: BoundsError: attempt to access 0-element Vector{String} at index [1]
+Stacktrace:
+ [1] getindex(A::Vector{String}, i1::Int64)
+   @ Base ./array.jl:924
+ [2] top-level scope
+   @ ~/home/SymbolicNODE.jl/scripts/refine_node.jl:4
+in expression starting at /home/simonwa/home/SymbolicNODE.jl/scripts/refine_node.jl:4

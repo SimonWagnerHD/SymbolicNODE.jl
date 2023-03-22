@@ -1,0 +1,17 @@
+  Activating project at `~/home/SymbolicNODE.jl`
+ERROR: LoadError: ArgumentError: Package NNlib not found in current path.
+- Run `import Pkg; Pkg.add("NNlib")` to install the NNlib package.
+Stacktrace:
+ [1] macro expansion
+   @ ./loading.jl:1163 [inlined]
+ [2] macro expansion
+   @ ./lock.jl:223 [inlined]
+ [3] require(into::Module, mod::Symbol)
+   @ Base ./loading.jl:1144
+ [4] eval
+   @ ./boot.jl:368 [inlined]
+ [5] load_ANN(filename::String)
+   @ NeuralODE ~/home/SymbolicNODE.jl/src/NeuralODE.jl:68
+ [6] top-level scope
+   @ ~/home/SymbolicNODE.jl/scripts/refine_sindy_node_cat.jl:34
+in expression starting at /home/simonwa/home/SymbolicNODE.jl/scripts/refine_sindy_node_cat.jl:34

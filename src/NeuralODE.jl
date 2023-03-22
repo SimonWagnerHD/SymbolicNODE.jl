@@ -43,7 +43,7 @@ function (m::NODE)(X,p=m.p)
     Array(solve(remake(m.prob; tspan=(t[1],t[end]),u0=x[:,1],p=p), m.alg; saveat=t, m.kwargs...))
 end
 
-#Function for the construction of an ANN used in a Neural ODE
+#Function for the construction of an ANN used in a Neural ODE n_layer includes hidden and output layers
 function NODE_ANN(in_dim, out_dim, n_weights, n_layers)
     layer_sizes = [in_dim]
     layer_activations = []
@@ -71,9 +71,9 @@ function load_ANN(filename)
 end
 
 #Train a given NODE
-function train_NODE(model::AbstractNDEModel, train_data, epochs; valid_data=nothing, η=1f-3, print_every=1)
+function train_NODE(model::AbstractNDEModel, train_data, epochs; valid_data=nothing, η=1f-3, decay=0.1, print_every=1)
     loss = Flux.Losses.mse
-    opt = Flux.AdamW(η)
+    opt = Flux.AdamW(η, (0.9, 0.999), decay)
     opt_state = Flux.setup(opt, model)
 
     train_losses = Float32[]

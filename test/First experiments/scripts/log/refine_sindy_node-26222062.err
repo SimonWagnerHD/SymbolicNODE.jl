@@ -1,0 +1,10 @@
+  Activating project at `~/home/SymbolicNODE.jl`
+ERROR: LoadError: UndefVarError: load_object not defined
+
+Some of the types have been truncated in the stacktrace for improved reading. To emit complete information
+in the stack trace, evaluate `TruncatedStacktraces.VERBOSE[] = true` and re-run the code.
+
+Stacktrace:
+ [1] top-level scope
+   @ ~/home/SymbolicNODE.jl/scripts/refine_sindy_node.jl:28
+in expression starting at /home/simonwa/home/SymbolicNODE.jl/scripts/refine_sindy_node.jl:28
