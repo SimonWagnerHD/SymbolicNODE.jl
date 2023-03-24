@@ -74,7 +74,7 @@ end
 #Train a given NODE
 function train_NODE(model::AbstractNDEModel, train_data, epochs; valid_data=nothing, re_nn=nothing, η=1f-3, decay=0.1, print_every=1, save_every=50, savefile="../models/node")
     loss = Flux.Losses.mse
-    opt = Scheduler(CosAnneal(λ0=η, λ1=η/10, period=100), Flux.AdamW(η, (0.9, 0.999), decay))
+    opt = Scheduler(CosAnneal(λ0=η, λ1=η/10, period=100), Flux.AdamW(η, (0.9, 0.999), decay), (o, s) -> (o.η = s))
     opt_state = Flux.setup(opt, model)
 
     train_losses = Float32[]
