@@ -7,7 +7,7 @@ using OrdinaryDiffEq
 using SciMLSensitivity
 using BSON
 using Statistics
-using ParameterSchedulers: Scheduler
+using ParameterSchedulers: Scheduler, CosAnneal
 
 abstract type AbstractNDEModel end 
 
