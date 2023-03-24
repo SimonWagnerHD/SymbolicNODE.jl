@@ -7,6 +7,7 @@ using OrdinaryDiffEq
 using SciMLSensitivity
 using BSON
 using Statistics
+using ParameterSchedulers: Scheduler
 
 abstract type AbstractNDEModel end 
 
@@ -44,12 +45,12 @@ function (m::NODE)(X,p=m.p)
 end
 
 #Function for the construction of an ANN used in a Neural ODE n_layer includes hidden and output layers
-function NODE_ANN(in_dim, out_dim, n_weights, n_layers)
+function NODE_ANN(in_dim, out_dim, n_weights, n_layers; activation=relu)
     layer_sizes = [in_dim]
     layer_activations = []
     for i in 1:(n_layers - 1)
         push!(layer_sizes, n_weights)
-        push!(layer_activations, relu) 
+        push!(layer_activations, activation) 
     end
     push!(layer_sizes, out_dim)
     push!(layer_activations, identity)
@@ -71,9 +72,9 @@ function load_ANN(filename)
 end
 
 #Train a given NODE
-function train_NODE(model::AbstractNDEModel, train_data, epochs; valid_data=nothing, η=1f-3, decay=0.1, print_every=1)
+function train_NODE(model::AbstractNDEModel, train_data, epochs; valid_data=nothing, re_nn=nothing, η=1f-3, decay=0.1, print_every=1, save_every=50, savefile="../models/node")
     loss = Flux.Losses.mse
-    opt = Flux.AdamW(η, (0.9, 0.999), decay)
+    opt = Scheduler(CosAnneal(λ0=η, λ1=η/10, period=100), Flux.AdamW(η, (0.9, 0.999), decay))
     opt_state = Flux.setup(opt, model)
 
     train_losses = Float32[]
@@ -124,11 +125,11 @@ function train_NODE(model::AbstractNDEModel, train_data, epochs; valid_data=noth
                 flush(stdout)
             end
         end
+	
+	if ((epoch % save_every == 0) && !isnothing(re_nn))
+	    save_ANN(re_nn(model.p), string(savefile,epoch,".bson"))
+	end
 
-        if (epoch % 30) == 0  # reduce the learning rate every 30 epochs
-            η /= 2
-            Flux.adjust!(opt_state, η)
-        end
     end
 
     if isnothing(valid_data)
