@@ -15,10 +15,10 @@ struct SINDy{S} <: AbstractSymRegModel
     sol::S
 end
 
-function SINDy(trajectory::AbstractArray)
+function SINDy(trajectory::AbstractArray; poly_base=2, trig_base=2)
     @variables t, (x(t))[1:size(trajectory)[1]]
     ddprob = DataDrivenProblem(trajectory)
-    basis = Basis([polynomial_basis(x, 3); sin_basis(x,1); cos_basis(x,1)], x, iv = t)
+    basis = Basis([polynomial_basis(x, poly_base); sin_basis(x,trig_base); cos_basis(x,trig_base)], x, iv = t)
     optimiser = STLSQ(Float32.(exp10.(-5:0.1:-1)))
     ddsol = solve(ddprob, basis, optimiser, options = DataDrivenCommonOptions(digits = 1))
     SINDy{typeof(ddsol)}(ddsol)

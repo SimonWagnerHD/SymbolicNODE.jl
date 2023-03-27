@@ -74,7 +74,7 @@ function create_animation(model::DoublePendulum, sol)
         xlims!(-(l1+l2),(l1+l2))
         ylims!(-(l1+l2),(l1+l2))
     end
-    gif(anim, "../images/pendulum.gif", fps = 10)
+    gif(anim, "pendulum.gif", fps = 10)
 end
 
 end
