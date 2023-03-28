@@ -8,6 +8,7 @@ using SymbolicRegression
 using BSplineKit
 using Suppressor
 using Serialization
+using Symbolics
 
 abstract type AbstractSymRegModel end
 
@@ -54,9 +55,24 @@ function data_diff_1dim(x, t)
     Float32.(diff(spl, Derivative(1)).(t))
 end
 
-struct GeneticSymReg{O,S} <: AbstractSymRegModel
+function get_vars(eqn, num_vars)
+    @variables dummy[1:num_vars]
+    vars = []
+    var_dict = Dict([parse(Int64, string(x)[2:end]) => x for x in get_variables(eqn)])
+    for i in 1:num_vars
+        if i in keys(var_dict)
+            push!(vars, var_dict[i])
+        else
+            push!(vars, dummy[i])
+        end
+    end
+end
+
+struct GeneticSymReg{O,S,E,I} <: AbstractSymRegModel
     options::O
     sol::S
+    expr::E
+    idx::I
 end
 
 function GeneticSymReg(X::AbstractArray, t::AbstractArray; npop=20, niter=10)
@@ -66,8 +82,11 @@ function GeneticSymReg(X::AbstractArray, t::AbstractArray; npop=20, niter=10)
 
     options = SymbolicRegression.Options(
     binary_operators=[+, *, /, -],
-    unary_operators=[cos, sin, exp],
-    npopulations=npop
+    unary_operators=[cos, sin],
+    npopulations=npop,
+    nested_constraints = [sin => [sin => 0, cos => 0], cos => [cos => 0, sin => 0]],
+    enable_autodiff = true,
+    save_to_file = false
     )
 
     #Estimate time derivatives of data
@@ -77,15 +96,23 @@ function GeneticSymReg(X::AbstractArray, t::AbstractArray; npop=20, niter=10)
         X, X_diff, niterations=niter, options=options
     )
 
+    expr = []
+    idc = []
+
     for i in 1:size(X)[1]
-        push!(sol, calculate_pareto_frontier(X, X_diff[i,:], hall_of_fame[i], options)[end].tree)
+        eqn = node_to_symbolic(calculate_pareto_frontier(X, X_diff[i,:], hall_of_fame[i], options)[end].tree, options)
+        idx = [parse(Int64, string(x)[2:end]) for x in get_variables(eqn)]
+        eqn_expr = build_function(eqn, get_variables(eqn))
+        push!(expr, eval(eqn_expr))
+        push!(idc, idx)
+        push!(sol, convert(Node{Float32}, calculate_pareto_frontier(X, X_diff[i,:], hall_of_fame[i], options)[end].tree))
     end
     
-    GeneticSymReg{typeof(options), typeof(sol)}(options, sol)
+    GeneticSymReg{typeof(options), typeof(sol), typeof(expr), typeof(idc)}(options, sol, expr, idc)
 end
 
 function (m::GeneticSymReg)(u)
-    vcat(transpose.([eval_tree_array(m.sol[i], u, m.options)[1] for i in 1:size(u)[1]])...)
+    [m.expr[i](u[m.idx[i]]) for i in 1:length(m.expr)]
 end
 
 end
