@@ -34,13 +34,13 @@ function (m::SINDy)(u)
 end
 
 
-#Custom save and load functions for SINDy object using Serialization.jl as plain BSON and JLD2 solutions do not work properly
-function save_sindy(m::SINDy, filename)
+#Custom save and load functions for SymRegModel object using Serialization.jl as plain BSON and JLD2 solutions do not work properly
+function save_model(m::AbstractSymRegModel, filename)
     serialize(filename, m)
     nothing
 end
 
-function load_sindy(filename)
+function load_model(filename)
     deserialize(filename)
 end
 
