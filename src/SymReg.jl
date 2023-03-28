@@ -91,10 +91,10 @@ function GeneticSymReg(X::AbstractArray, t::AbstractArray; npop=20, niter=10)
 
     #Estimate time derivatives of data
     X_diff = data_diff(X, t)
-
-    hall_of_fame = EquationSearch(
+    hall_of_fame = @suppress begin EquationSearch(
         X, X_diff, niterations=niter, options=options
     )
+    end
 
     expr = []
     idc = []
