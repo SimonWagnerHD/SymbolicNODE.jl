@@ -1,6 +1,6 @@
 module SymReg
 
-export SINDy, GeneticSymReg, save_sindy, load_sindy
+export SINDy, GeneticSymReg, save_model, load_model
 
 using OrdinaryDiffEq
 using DataDrivenDiffEq, DataDrivenSparse
