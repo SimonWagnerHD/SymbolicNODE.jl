@@ -1,6 +1,6 @@
 module SymReg
 
-export SINDy, GeneticSymReg, save_model, load_model
+export SINDy, GeneticSymReg, save_model, load_model, save_gsr, load_gsr
 
 using OrdinaryDiffEq
 using DataDrivenDiffEq, DataDrivenSparse
@@ -34,7 +34,7 @@ function (m::SINDy)(u)
 end
 
 
-#Custom save and load functions for SymRegModel object using Serialization.jl as plain BSON and JLD2 solutions do not work properly
+#Custom save and load functions for SINDy object using Serialization.jl as plain BSON and JLD2 solutions do not work properly
 function save_model(m::AbstractSymRegModel, filename)
     serialize(filename, m)
     nothing
@@ -75,24 +75,23 @@ struct GeneticSymReg{O,S,E,I} <: AbstractSymRegModel
     idx::I
 end
 
-function GeneticSymReg(X::AbstractArray, t::AbstractArray; npop=20, niter=10)
+function GeneticSymReg(X::AbstractArray, t::AbstractArray; niter=10, opt_args...)
     X = Array(X)
 
     sol = []
 
-    options = SymbolicRegression.Options(
+    options = SymbolicRegression.Options(;
     binary_operators=[+, *, /, -],
     unary_operators=[cos, sin],
-    npopulations=npop,
     nested_constraints = [sin => [sin => 0, cos => 0], cos => [cos => 0, sin => 0]],
-    enable_autodiff = true,
-    save_to_file = false
+    save_to_file = false,
+    opt_args...
     )
 
     #Estimate time derivatives of data
     X_diff = data_diff(X, t)
     hall_of_fame = @suppress begin EquationSearch(
-        X, X_diff, niterations=niter, options=options
+        X, X_diff, niterations=niter, options=options,parallelism=:multithreading
     )
     end
 
@@ -105,7 +104,23 @@ function GeneticSymReg(X::AbstractArray, t::AbstractArray; npop=20, niter=10)
         eqn_expr = build_function(eqn, get_variables(eqn))
         push!(expr, eval(eqn_expr))
         push!(idc, idx)
-        push!(sol, convert(Node{Float32}, calculate_pareto_frontier(X, X_diff[i,:], hall_of_fame[i], options)[end].tree))
+        push!(sol, calculate_pareto_frontier(X, X_diff[i,:], hall_of_fame[i], options)[end].tree)
+    end
+    
+    GeneticSymReg{typeof(options), typeof(sol), typeof(expr), typeof(idc)}(options, sol, expr, idc)
+end
+
+#Constructor for loading a model from a file (see save_gsr)
+function GeneticSymReg(sol, options)
+    expr = []
+    idc = []
+
+    for i in 1:size(sol)[1]
+        eqn = node_to_symbolic(sol[i], options)
+        idx = [parse(Int64, string(x)[2:end]) for x in get_variables(eqn)]
+        eqn_expr = build_function(eqn, get_variables(eqn))
+        push!(expr, eval(eqn_expr))
+        push!(idc, idx)
     end
     
     GeneticSymReg{typeof(options), typeof(sol), typeof(expr), typeof(idc)}(options, sol, expr, idc)
@@ -113,6 +128,17 @@ end
 
 function (m::GeneticSymReg)(u)
     [m.expr[i](u[m.idx[i]]) for i in 1:length(m.expr)]
+end
+
+#Custom save and load functions for GeneticSymReg object storing only sol and options as expr does not get stored properly
+function save_gsr(m::GeneticSymReg, filename)
+    serialize(filename, (m.sol, m.options))
+    nothing
+end
+
+function load_gsr(filename)
+    sol, options = deserialize(filename)
+    GeneticSymReg(sol, options)
 end
 
 end
