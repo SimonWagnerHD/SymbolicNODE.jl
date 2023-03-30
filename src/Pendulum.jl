@@ -2,9 +2,10 @@ module Pendulum
 
 export DoublePendulum, plot_trajectory, create_animation, trajectory, generate_train_data
 
-using Plots, OrdinaryDiffEq, NODEData
+using Plots, OrdinaryDiffEq
 
-#include("./dsmodel.jl")
+include("./TSData.jl")
+using .TSData
 
 abstract type AbstractDSmodel end
 
@@ -18,11 +19,7 @@ function generate_train_data(model::AbstractDSmodel, series_length, x0; N_t=500,
     t_train = t_transient:dt:t_transient+N_t*dt
     sol = trajectory(model, x0, N_t, dt, t_transient)
     data_train = Array(sol(t_train))
-    if isnothing(valid_set)
-        return NODEDataloader(Float32.(data_train), t_train, series_length)
-    else
-        return NODEDataloader(Float32.(data_train), t_train, series_length; valid_set=valid_set)
-    end
+    return TSDataloader(Float32.(data_train), t_train, series_length; valid_set=valid_set, shuffle=true)
 end
 
 struct DoublePendulum{P, E} <: AbstractDSmodel

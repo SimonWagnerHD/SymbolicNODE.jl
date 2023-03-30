@@ -85,33 +85,25 @@ function train_NODE(model::AbstractNDEModel, train_data, epochs; valid_data=noth
     for (learn_rate, epoch) in zip(schedule, 1:epochs)
         Flux.adjust!(opt_state, learn_rate)
         losses = Float32[]
-        #Detect if there is an error in the loss computation. If so, skip the update.
-        #Try catch block outside of inner loop to speed up training
-        try
-            for (i, data) in enumerate(train_data)
-                t, x = data
-            
-                val, grads = Flux.withgradient(model) do m
-                    result = m((t,x))
-                    loss(result, x)
-                end 
-                    
-                # Save the loss from the forward pass. (Done outside of gradient.)
-                push!(losses, val)
-
-                # Detect loss of Inf or NaN. Print a warning, and then skip update!
-                if !isfinite(val)
-                    @warn "loss is $val on item $i" epoch
-                    continue
-                end
+        for (i, data) in enumerate(train_data)
+            t, x = data
+        
+            val, grads = Flux.withgradient(model) do m
+                result = m((t,x))
+                loss(result, x)
+            end 
                 
-                Flux.update!(opt_state, model, grads[1])
-            end
-        catch e
-            @warn "Error in loss computation. Skipping update."
-            continue
-        end
+            # Save the loss from the forward pass. (Done outside of gradient.)
+            push!(losses, val)
 
+            # Detect loss of Inf or NaN. Print a warning, and then skip update!
+            if !isfinite(val)
+                @warn "loss is $val on item $i" epoch
+                continue
+            end
+            
+            Flux.update!(opt_state, model, grads[1])
+        end
         train_loss = Statistics.mean(losses)
         push!(train_losses, train_loss)
 
