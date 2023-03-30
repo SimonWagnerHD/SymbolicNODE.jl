@@ -21,7 +21,7 @@ Model for setting up and training Neural Ordinary Differential Equations.
 * `p` vector of trainable parameters 
 * `prob` ODEProblem 
 * `alg` Algorithm to use for the `solve` command 
-* `kwargs` any additional keyword arguments that should be handed over
+* `kwargs` any additional keyword arguments that should be handed to the solve method
 """
 
 struct NODE{P,R,A,K} <: AbstractNDEModel
@@ -85,26 +85,37 @@ function train_NODE(model::AbstractNDEModel, train_data, epochs; valid_data=noth
     for (learn_rate, epoch) in zip(schedule, 1:epochs)
         Flux.adjust!(opt_state, learn_rate)
         losses = Float32[]
-        for (i, data) in enumerate(train_data)
-            t, x = data
-            val, grads = Flux.withgradient(model) do m
-                result = m((t,x))
-                loss(result, x)
-            end
-            # Save the loss from the forward pass. (Done outside of gradient.)
-            push!(losses, val)
+        #Detect if there is an error in the loss computation. If so, skip the update.
+        #Try catch block outside of inner loop to speed up training
+        try
+            for (i, data) in enumerate(train_data)
+                t, x = data
+            
+                val, grads = Flux.withgradient(model) do m
+                    result = m((t,x))
+                    loss(result, x)
+                end 
+                    
+                # Save the loss from the forward pass. (Done outside of gradient.)
+                push!(losses, val)
 
-            # Detect loss of Inf or NaN. Print a warning, and then skip update!
-            if !isfinite(val)
-                @warn "loss is $val on item $i" epoch
-                continue
+                # Detect loss of Inf or NaN. Print a warning, and then skip update!
+                if !isfinite(val)
+                    @warn "loss is $val on item $i" epoch
+                    continue
+                end
+                
+                Flux.update!(opt_state, model, grads[1])
             end
-
-            Flux.update!(opt_state, model, grads[1])
+        catch e
+            @warn "Error in loss computation. Skipping update."
+            continue
         end
+
         train_loss = Statistics.mean(losses)
         push!(train_losses, train_loss)
 
+        #If valid_data is specified, calculate the validation loss every epoch
         if !isnothing(valid_data)
             losses = Float32[]
 
@@ -128,12 +139,12 @@ function train_NODE(model::AbstractNDEModel, train_data, epochs; valid_data=noth
             end
         end
 	
+    #If savefile is specified, save the model every save_every epochs
 	if ((epoch % save_every == 0) && !isnothing(re_nn))
 	    save_ANN(re_nn(model.p), string(savefile,epoch,".bson"))
 	end
 
     end
-
     if isnothing(valid_data)
         return train_losses
     else
