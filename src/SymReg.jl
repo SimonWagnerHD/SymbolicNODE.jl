@@ -1,6 +1,6 @@
 module SymReg
 
-export SINDy, GeneticSymReg, save_model, load_model, save_gsr, load_gsr
+export SINDy, GeneticSymReg, SymbolicAugment, save_model, load_model, save_gsr, load_gsr
 
 using OrdinaryDiffEq
 using DataDrivenDiffEq, DataDrivenSparse
@@ -104,19 +104,34 @@ function GeneticSymReg(X::AbstractArray, t::AbstractArray; niter=10, opt_args...
         eqn_expr = build_function(eqn, get_variables(eqn))
         push!(expr, eval(eqn_expr))
         push!(idc, idx)
-        push!(sol, calculate_pareto_frontier(X, X_diff[i,:], hall_of_fame[i], options)[end].tree)
+        #push!(sol, calculate_pareto_frontier(X, X_diff[i,:], hall_of_fame[i], options)[end].tree)
+        push!(sol, eqn)
     end
     
     GeneticSymReg{typeof(options), typeof(sol), typeof(expr), typeof(idc)}(options, sol, expr, idc)
 end
 
 #Constructor for loading a model from a file (see save_gsr)
+# function GeneticSymReg(sol, options)
+#     expr = []
+#     idc = []
+
+#     for i in 1:size(sol)[1]
+#         eqn = node_to_symbolic(sol[i], options)
+#         idx = [parse(Int64, string(x)[2:end]) for x in get_variables(eqn)]
+#         eqn_expr = build_function(eqn, get_variables(eqn))
+#         push!(expr, eval(eqn_expr))
+#         push!(idc, idx)
+#     end
+    
+#     GeneticSymReg{typeof(options), typeof(sol), typeof(expr), typeof(idc)}(options, sol, expr, idc)
+# end
+
 function GeneticSymReg(sol, options)
     expr = []
     idc = []
 
-    for i in 1:size(sol)[1]
-        eqn = node_to_symbolic(sol[i], options)
+    for eqn in sol
         idx = [parse(Int64, string(x)[2:end]) for x in get_variables(eqn)]
         eqn_expr = build_function(eqn, get_variables(eqn))
         push!(expr, eval(eqn_expr))
@@ -139,6 +154,60 @@ end
 function load_gsr(filename)
     sol, options = deserialize(filename)
     GeneticSymReg(sol, options)
+end
+
+#Extract terms with a given size from a symbolic expression 
+function split_expr!(x::Expr, split; min_size=2, max_size=6)
+    expr_size = 1
+    for xx in x.args[2:end]
+        if isa(xx,Expr)
+            expr_size += split_expr!(xx, split; min_size, max_size)
+        end
+    end
+    if (expr_size <= max_size) && (expr_size >= min_size)
+        push!(split, x)
+    end
+    return expr_size
+end
+
+abstract type AbstractSymbolicAugment end
+
+struct SymbolicAugment{S, N <: Integer, E, I} <: AbstractSymbolicAugment
+    split::S
+    N_eqn::N
+    expr::E
+    idx::I
+end
+
+function SymbolicAugment(model::AbstractSymRegModel, eqn_idx; min_size=2, max_size=6)
+    split = []
+    for i in eqn_idx
+        eqn = Meta.parse(string(model.sol[i]))
+        split_expr!(eqn, split; min_size=min_size, max_size=max_size)
+    end
+
+    expr = []
+    idc = []
+
+    for (i, eqn) in enumerate(split)
+        eqn = Symbolics.parse_expr_to_symbolic(eqn, Main)
+        idx = [parse(Int64, string(x)[2:end]) for x in get_variables(eqn)]
+        if length(idx) == 0
+            deleteat!(split, i)
+            continue
+        end
+        eqn_expr = build_function(eqn, get_variables(eqn))
+        push!(expr, eval(eqn_expr))
+        push!(idc, idx)
+    end
+
+    N_eqn = length(split)
+
+    SymbolicAugment{typeof(split), typeof(N_eqn),typeof(expr),typeof(idc)}(split, N_eqn, expr, idc)
+end
+
+function (m::SymbolicAugment)(u)
+    [m.expr[i](u[m.idx[i]]) for i in 1:length(m.expr)]
 end
 
 end

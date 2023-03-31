@@ -97,10 +97,10 @@ function train_NODE(model::AbstractNDEModel, train_data, epochs; valid_data=noth
             push!(losses, val)
 
             # Detect loss of Inf or NaN. Print a warning, and then skip update!
-            if !isfinite(val)
-                @warn "loss is $val on item $i" epoch
-                continue
-            end
+            # if !isfinite(val)
+            #     @warn "loss is $val on item $i" epoch
+            #     continue
+            # end
             
             Flux.update!(opt_state, model, grads[1])
         end
