@@ -206,9 +206,7 @@ end
 function SymbolicAugment(model::AbstractSymRegModel, eqn_idx; min_size=2, max_size=6)
     split = []
     for i in eqn_idx
-        println(string(model.sol[i]))
         eqn = parse32(string(model.sol[i]))
-        println(eqn)
         split_expr!(eqn, split; min_size=min_size, max_size=max_size)
     end
 
