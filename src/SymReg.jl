@@ -175,8 +175,8 @@ function parse32(str::String)
     out = ""
     num = ['0','1','2','3','4','5','6','7','8','9']
     status = 0
-    for s in str
-        if status == 0 && s in num
+    for (i,s) in enumerate(str)
+        if (status == 0 || status == 1) && s in num
             status = 1
         elseif status == 1 && s == '.'
             status = 2
@@ -185,6 +185,9 @@ function parse32(str::String)
         elseif status == 2 && !(s in num)
             out = string(out, "f0")
             status = 0
+        elseif status == 2 && i == length(str)
+            out = string(out, s, "f0")
+            return Meta.parse(out)
         end
         out = string(out, s)
     end
@@ -203,7 +206,9 @@ end
 function SymbolicAugment(model::AbstractSymRegModel, eqn_idx; min_size=2, max_size=6)
     split = []
     for i in eqn_idx
+        println(string(model.sol[i]))
         eqn = parse32(string(model.sol[i]))
+        println(eqn)
         split_expr!(eqn, split; min_size=min_size, max_size=max_size)
     end
 
