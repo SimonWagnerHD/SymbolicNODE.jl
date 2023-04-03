@@ -170,6 +170,27 @@ function split_expr!(x::Expr, split; min_size=2, max_size=6)
     return expr_size
 end
 
+#Parses string and adds Float32 literals to all numbers 
+function parse32(str::String)
+    out = ""
+    num = ['0','1','2','3','4','5','6','7','8','9']
+    status = 0
+    for s in str
+        if status == 0 && s in num
+            status = 1
+        elseif status == 1 && s == '.'
+            status = 2
+        elseif status == 1 && s != '.'
+            status = 0
+        elseif status == 2 && !(s in num)
+            out = string(out, "f0")
+            status = 0
+        end
+        out = string(out, s)
+    end
+    return Meta.parse(out)
+end
+
 abstract type AbstractSymbolicAugment end
 
 struct SymbolicAugment{S, N <: Integer, E, I} <: AbstractSymbolicAugment
@@ -182,7 +203,7 @@ end
 function SymbolicAugment(model::AbstractSymRegModel, eqn_idx; min_size=2, max_size=6)
     split = []
     for i in eqn_idx
-        eqn = Meta.parse(string(model.sol[i]))
+        eqn = parse32(string(model.sol[i]))
         split_expr!(eqn, split; min_size=min_size, max_size=max_size)
     end
 
