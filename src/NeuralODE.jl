@@ -73,9 +73,9 @@ function load_ANN(filename)
 end
 
 #Train a given NODE
-function train_NODE(model::AbstractNDEModel, train_data, epochs; valid_data=nothing, re_nn=nothing, η=1f-3, decay=0.1, print_every=1, save_every=50, savefile="../models/node")
+function train_NODE(model::AbstractNDEModel, train_data, epochs; valid_data=nothing, re_nn=nothing, η=1f-3, η₂=1f-4, period=100, decay=0.1, print_every=1, save_every=50, savefile="../models/node")
     loss = Flux.Losses.mse
-    schedule = CosAnneal(λ0=η, λ1=η/10, period=100)
+    schedule = CosAnneal(λ0=η, λ1=η₂, period=period)
     opt = Flux.AdamW(η, (0.9, 0.999), decay)
     opt_state = Flux.setup(opt, model)
 
