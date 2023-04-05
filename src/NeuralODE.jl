@@ -130,10 +130,12 @@ function train_NODE(model::AbstractNDEModel, train_data, epochs; valid_data=noth
 
             if (epoch % print_every) == 0 
                 println("Epoch: $epoch; Train Loss: $train_loss; Validation Loss: $valid_loss")
+                flush(stdout)
             end
         else
             if (epoch % print_every) == 0 
                 println("Epoch: $epoch; Train Loss: $train_loss")
+                flush(stdout)
             end
         end
 	
