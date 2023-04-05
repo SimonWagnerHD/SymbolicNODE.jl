@@ -4,6 +4,22 @@ abstract type AbstractTSDataloader{T,U,N} end
 
 using SciMLBase, EllipsisNotation, Random
 
+"""
+
+TSDataloader{T,U,N} <: AbstractTSDataloader{T,U,N}
+
+Data loader for time series data which can be used to train a NeuralODE.
+
+# Fields:
+
+* `data` array holding a phase space trajectory 
+* `t` array of corresponding time points
+* `N` number of samples in the data loader
+* `N_length` length of one sample
+* `idx` array of startindices which allows to shuffle the load order of samples
+
+"""
+
 struct TSDataloader{T<:AbstractArray,U<:AbstractVector,N<:Integer} <: AbstractTSDataloader{T,U,N,}
     data::T
     t::U

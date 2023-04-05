@@ -60,6 +60,7 @@ function NODE_ANN(in_dim, out_dim, n_weights, n_layers; activation=relu)
     p, re_nn = Flux.destructure(nn)
 end
 
+#Function for saving an ANN
 function save_ANN(model, filename)
     savemodel = model
     BSON.@save filename savemodel
@@ -87,21 +88,23 @@ function train_NODE(model::AbstractNDEModel, train_data, epochs; valid_data=noth
         losses = Float32[]
         for (i, data) in enumerate(train_data)
             t, x = data
-        
-            val, grads = Flux.withgradient(model) do m
-                result = m((t,x))
-                loss(result, x)
-            end 
-                
+	        val, grads = 0,0
+            # Calculate the loss and gradients for the forward pass.
+            # An error can occur if the ODE solution is instable and and consequently the solution specified at time t₂ is not defined.
+            # In that case skip the update and continue with the next batch.
+            try
+                val, grads = Flux.withgradient(model) do m
+                    result = m((t,x))
+                    loss(result, x)
+                end 
+            catch e
+                @error "An error occured while calculating the training loss, skipping update"
+                println(e)
+                continue
+	        end
+
             # Save the loss from the forward pass. (Done outside of gradient.)
             push!(losses, val)
-
-            # Detect loss of Inf or NaN. Print a warning, and then skip update!
-            # if !isfinite(val)
-            #     @warn "loss is $val on item $i" epoch
-            #     continue
-            # end
-            
             Flux.update!(opt_state, model, grads[1])
         end
         train_loss = Statistics.mean(losses)
@@ -110,33 +113,37 @@ function train_NODE(model::AbstractNDEModel, train_data, epochs; valid_data=noth
         #If valid_data is specified, calculate the validation loss every epoch
         if !isnothing(valid_data)
             losses = Float32[]
+            valid_loss = 0
+            try
+                for (i, data) in enumerate(valid_data)
+                    t, x = data
+                    result = model((t,x))
+                    push!(losses, loss(result, x))
+                end
 
-            for (i, data) in enumerate(valid_data)
-                t, x = data
-                result = model((t,x))
-                push!(losses, loss(result, x))
+                valid_loss = Statistics.mean(losses)
+                push!(valid_losses, valid_loss)
+            catch e
+                @warn "An error occured while calculating the validation loss"
+                push!(valid_losses, NaN)
             end
-
-            valid_loss = Statistics.mean(losses)
-            push!(valid_losses, valid_loss)
 
             if (epoch % print_every) == 0 
                 println("Epoch: $epoch; Train Loss: $train_loss; Validation Loss: $valid_loss")
-                flush(stdout)
             end
         else
             if (epoch % print_every) == 0 
                 println("Epoch: $epoch; Train Loss: $train_loss")
-                flush(stdout)
             end
         end
 	
-    #If savefile is specified, save the model every save_every epochs
-	if ((epoch % save_every == 0) && !isnothing(re_nn))
-	    save_ANN(re_nn(model.p), string(savefile,epoch,".bson"))
-	end
+        #If savefile is specified, save the model every save_every epochs
+        if ((epoch % save_every == 0) && !isnothing(re_nn))
+            save_ANN(re_nn(model.p), string(savefile,epoch,".bson"))
+        end
 
     end
+
     if isnothing(valid_data)
         return train_losses
     else

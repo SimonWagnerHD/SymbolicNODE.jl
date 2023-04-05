@@ -9,18 +9,35 @@ using .TSData
 
 abstract type AbstractDSmodel end
 
+#Generate a trajectory of a given DynamicalSystem
 function trajectory(model::AbstractDSmodel, x0, N_t=500, dt=0.1f0, t_transient=0)
     tspan = (0f0, Float32(t_transient + N_t * dt))
     prob = ODEProblem(model, x0, tspan, model.params) 
-    sol = solve(prob, Tsit5(), saveat=t_transient:dt:t_transient + N_t * dt)
+    return solve(prob, Tsit5(), saveat=t_transient:dt:t_transient + N_t * dt)
 end
 
+#Generate training data for a given DynamicalSystem which may be used to train a NeuralODE
 function generate_train_data(model::AbstractDSmodel, series_length, x0; N_t=500, dt=0.1, t_transient=0, valid_set=nothing)
     t_train = t_transient:dt:t_transient+N_t*dt
     sol = trajectory(model, x0, N_t, dt, t_transient)
     data_train = Array(sol(t_train))
     return TSDataloader(Float32.(data_train), t_train, series_length; valid_set=valid_set, shuffle=true)
 end
+
+"""
+DoublePendulum{P, E} <: AbstractDSmodel
+
+Model which stores the parameters of a double pendulum and the equations of motion.
+
+# Fields:
+
+* `params` vector of parameters
+* `m1` mass of the first pendulum
+* `m2` mass of the second pendulum
+* `l1` length of the first pendulum
+* `l2` length of the second pendulum
+* `g` gravitational acceleration
+"""
 
 struct DoublePendulum{P, E} <: AbstractDSmodel
     params::P
@@ -35,8 +52,9 @@ function DoublePendulum(params)
     DoublePendulum{typeof(params), typeof(params[1])}(params, params...)
 end
 
-#x = (θ_1, θ_2, ω_1, ω_2)
-#p = (m_1, m_2, l_1, l_2, g)
+#Right hand side of the first order ODE system
+#x = (θ₁, θ₂, ω₁, ω₂)
+#p = (m₁, m₂, l₁, l₂, g)
 function (m::DoublePendulum)(x,p,t)
     m1, m2, l1, l2, g = p
     dθ_1 = x[3]
@@ -55,10 +73,12 @@ function (m::DoublePendulum)(x,p,t)
     return [dθ_1, dθ_2, dω_1, dω_2]
 end
 
+#Plot the trajectory of a double pendulum
 function plot_trajectory(model::DoublePendulum, sol)
     plot(sin.(sol[1,:])*model.l1 + sin.(sol[2,:])*model.l2, -cos.(sol[1,:])*model.l1 - cos.(sol[2,:])*model.l2)
 end
 
+#Create an animated gif of the trajectory of a double pendulum
 function create_animation(model::DoublePendulum, sol)
     n = length(sol[1,:])
     m1, m2, l1, l2, g = model.params

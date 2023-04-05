@@ -12,10 +12,21 @@ using Symbolics
 
 abstract type AbstractSymRegModel end
 
+"""
+SINDy{S} <: AbstractSymRegModel
+
+Model for setting up s SINDy model, which then can be evaluated by calling the model.
+
+# Fields:
+
+* `sol` solution object of the SINDy model
+"""
+
 struct SINDy{S} <: AbstractSymRegModel
     sol::S
 end
 
+#poly_base specifies the order of the used polynomial_basis, trig_base specifies the order of the used sin and cos basis functions
 function SINDy(trajectory::AbstractArray; poly_base=2, trig_base=2)
     @variables t, (x(t))[1:size(trajectory)[1]]
     ddprob = DataDrivenProblem(trajectory)
@@ -34,7 +45,7 @@ function (m::SINDy)(u)
 end
 
 
-#Custom save and load functions for SINDy object using Serialization.jl as plain BSON and JLD2 solutions do not work properly
+#Custom save and load functions for SINDy object using Serialization.jl. Note that BSON and JLD2 solutions do not work properly when trying to load a model in a new session.
 function save_model(m::AbstractSymRegModel, filename)
     serialize(filename, m)
     nothing
@@ -55,18 +66,18 @@ function data_diff_1dim(x, t)
     Float32.(diff(spl, Derivative(1)).(t))
 end
 
-function get_vars(eqn, num_vars)
-    @variables dummy[1:num_vars]
-    vars = []
-    var_dict = Dict([parse(Int64, string(x)[2:end]) => x for x in get_variables(eqn)])
-    for i in 1:num_vars
-        if i in keys(var_dict)
-            push!(vars, var_dict[i])
-        else
-            push!(vars, dummy[i])
-        end
-    end
-end
+"""
+GeneticSymReg{O,S,E,I} <: AbstractSymRegModel
+
+Model for setting up a Genetic Symbolic Regression model, which then can be evaluated by calling the model.
+
+# Fields:
+
+* `options` options for the SymbolicRegression.jl package
+* `sol` symbolic expressions of the rhs equations
+* `expr` callable functions corresponding to the symbolic expressions in `sol`
+* `idx` indices of the used variables in each equation
+"""
 
 struct GeneticSymReg{O,S,E,I} <: AbstractSymRegModel
     options::O
@@ -75,6 +86,7 @@ struct GeneticSymReg{O,S,E,I} <: AbstractSymRegModel
     idx::I
 end
 
+#Standard constructor which sets up and trains a new model given some trajectory
 function GeneticSymReg(X::AbstractArray, t::AbstractArray; niter=10, opt_args...)
     X = Array(X)
 
@@ -104,29 +116,13 @@ function GeneticSymReg(X::AbstractArray, t::AbstractArray; niter=10, opt_args...
         eqn_expr = build_function(eqn, get_variables(eqn))
         push!(expr, eval(eqn_expr))
         push!(idc, idx)
-        #push!(sol, calculate_pareto_frontier(X, X_diff[i,:], hall_of_fame[i], options)[end].tree)
         push!(sol, eqn)
     end
     
     GeneticSymReg{typeof(options), typeof(sol), typeof(expr), typeof(idc)}(options, sol, expr, idc)
 end
 
-#Constructor for loading a model from a file (see save_gsr)
-# function GeneticSymReg(sol, options)
-#     expr = []
-#     idc = []
-
-#     for i in 1:size(sol)[1]
-#         eqn = node_to_symbolic(sol[i], options)
-#         idx = [parse(Int64, string(x)[2:end]) for x in get_variables(eqn)]
-#         eqn_expr = build_function(eqn, get_variables(eqn))
-#         push!(expr, eval(eqn_expr))
-#         push!(idc, idx)
-#     end
-    
-#     GeneticSymReg{typeof(options), typeof(sol), typeof(expr), typeof(idc)}(options, sol, expr, idc)
-# end
-
+#Constructor used when loading a model from a file
 function GeneticSymReg(sol, options)
     expr = []
     idc = []
@@ -195,6 +191,21 @@ function parse32(str::String)
 end
 
 abstract type AbstractSymbolicAugment end
+
+"""
+
+SymbolicAugment{S, N <: Integer, E, I} <: AbstractSymbolicAugment
+
+Model which extracts terms of a given size from a symbolic expression and stores them as callable functions.
+
+# Fields:
+
+* `split` symbolic expressions for all splitted terms
+* `N_eqn` number of equations
+* `expr` callable functions corresponding to the symbolic expressions in `split`
+* `idx` indices of the used variables in each equation
+
+"""
 
 struct SymbolicAugment{S, N <: Integer, E, I} <: AbstractSymbolicAugment
     split::S
