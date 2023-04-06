@@ -220,21 +220,29 @@ function SymbolicAugment(model::AbstractSymRegModel, eqn_idx; min_size=2, max_si
         eqn = parse32(string(model.sol[i]))
         split_expr!(eqn, split; min_size=min_size, max_size=max_size)
     end
+    split = unique(split)
 
     expr = []
     idc = []
+    delete = []
 
     for (i, eqn) in enumerate(split)
+        if eqn.args[1] == :+ || eqn.args[1] == :-
+            push!(delete, i)
+            continue
+        end
         eqn = Symbolics.parse_expr_to_symbolic(eqn, Main)
         idx = [parse(Int64, string(x)[2:end]) for x in get_variables(eqn)]
         if length(idx) == 0
-            deleteat!(split, i)
+            push!(delete, i)
             continue
         end
         eqn_expr = build_function(eqn, get_variables(eqn))
         push!(expr, eval(eqn_expr))
         push!(idc, idx)
     end
+
+    deleteat!(split, delete)
 
     N_eqn = length(split)
 
