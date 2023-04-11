@@ -1,6 +1,6 @@
 module Pendulum
 
-export DoublePendulum, plot_trajectory, create_animation, trajectory, generate_train_data, pendulum_loss
+export DoublePendulum, plot_trajectory, create_animation, trajectory, generate_train_data, pendulum_loss, pendulum_periodic
 
 using Plots, OrdinaryDiffEq, Statistics
 
