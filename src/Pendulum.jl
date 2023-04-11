@@ -107,3 +107,5 @@ end
 function pendulum_periodic(x)
     return transpose([rem2pi.(x[1,:], RoundDown) rem2pi.(x[2,:], RoundDown) x[3,:] x[4,:]])
 end
+
+end
