@@ -21,19 +21,21 @@ Model for setting up and training Neural Ordinary Differential Equations.
 * `p` vector of trainable parameters 
 * `prob` ODEProblem 
 * `alg` Algorithm to use for the `solve` command 
+* `trafo` transformation function which is applied to the output of the Neural ODE
 * `kwargs` any additional keyword arguments that should be handed to the solve method
 """
 
-struct NODE{P,R,A,K} <: AbstractNDEModel
+struct NODE{P,R,A,T,K} <: AbstractNDEModel
     p::P 
     prob::R 
     alg::A
+    trafo::T
     kwargs::K
 end 
 
-function NODE(prob; alg=Tsit5(), kwargs...)
+function NODE(prob; trafo=x->x, alg=Tsit5(), kwargs...)
     p = prob.p 
-    NODE{typeof(p), typeof(prob), typeof(alg), typeof(kwargs)}(p, prob, alg, kwargs)
+    NODE{typeof(p), typeof(prob), typeof(alg), typeof(trafo), typeof(kwargs)}(p, prob, alg, trafo, kwargs)
 end 
 
 Flux.@functor NODE
@@ -41,7 +43,8 @@ Flux.trainable(m::NODE) = (p=m.p,)
 
 function (m::NODE)(X,p=m.p)
     (t, x) = X 
-    Array(solve(remake(m.prob; tspan=(t[1],t[end]),u0=x[:,1],p=p), m.alg; saveat=t, m.kwargs...))
+    sol = Array(solve(remake(m.prob; tspan=(t[1],t[end]),u0=x[:,1],p=p), m.alg; saveat=t, m.kwargs...))
+    return m.trafo(sol)
 end
 
 #Function for the construction of an ANN used in a Neural ODE n_layer includes hidden and output layers
@@ -73,8 +76,7 @@ function load_ANN(filename)
 end
 
 #Train a given NODE
-function train_NODE(model::AbstractNDEModel, train_data, epochs; valid_data=nothing, re_nn=nothing, η=1f-3, η₂=1f-4, period=100, decay=1f-6, print_every=1, save_every=50, savefile="../models/node")
-    loss = Flux.Losses.mse
+function train_NODE(model::AbstractNDEModel, train_data, epochs; loss=Flux.Losses.mse, valid_data=nothing, re_nn=nothing, η=1f-3, η₂=1f-4, period=100, decay=1f-6, print_every=1, save_every=50, savefile="../models/node")
     schedule = CosAnneal(λ0=η, λ1=η₂, period=period)
     opt = Flux.AdamW(η, (0.9, 0.999), decay)
     opt_state = Flux.setup(opt, model)

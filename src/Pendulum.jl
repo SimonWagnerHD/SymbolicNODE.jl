@@ -1,8 +1,8 @@
 module Pendulum
 
-export DoublePendulum, plot_trajectory, create_animation, trajectory, generate_train_data
+export DoublePendulum, plot_trajectory, create_animation, trajectory, generate_train_data, pendulum_loss
 
-using Plots, OrdinaryDiffEq
+using Plots, OrdinaryDiffEq, Statistics
 
 include("./TSData.jl")
 using .TSData
@@ -17,10 +17,14 @@ function trajectory(model::AbstractDSmodel, x0, N_t=500, dt=0.1f0, t_transient=0
 end
 
 #Generate training data for a given DynamicalSystem which may be used to train a NeuralODE
-function generate_train_data(model::AbstractDSmodel, series_length, x0; N_t=500, dt=0.1, t_transient=0, valid_set=nothing)
+function generate_train_data(model::AbstractDSmodel, series_length, x0; N_t=500, dt=0.1, t_transient=0, periodic=true, valid_set=nothing)
     t_train = t_transient:dt:t_transient+N_t*dt
     sol = trajectory(model, x0, N_t, dt, t_transient)
     data_train = Array(sol(t_train))
+    if periodic
+        data_train[1,:] = rem2pi.(data_train[1,:], RoundDown)
+        data_train[2,:] = rem2pi.(data_train[2,:], RoundDown)
+    end
     return TSDataloader(Float32.(data_train), t_train, series_length; valid_set=valid_set, shuffle=true)
 end
 
@@ -92,6 +96,12 @@ function create_animation(model::DoublePendulum, sol)
         ylims!(-(l1+l2),(l1+l2))
     end
     gif(anim, "pendulum.gif", fps = 10)
+end
+
+function pendulum_loss(y_pred,y_true)
+    l1 = (π .- abs.(rem2pi.(y_pred[1:2,:] .- y_true[1:2,:], RoundDown) .- π)).^2
+    l2 = (y_pred[3:4,:] .- y_true[3:4,:]).^2
+    return (mean(l1) + mean(l2))/2
 end
 
 end
