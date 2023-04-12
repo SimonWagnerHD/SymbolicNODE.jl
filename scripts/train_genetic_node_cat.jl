@@ -24,16 +24,16 @@ t_transient = 0f0
 N_t = 8000
 dt = 0.02f0
 
-sol = trajectory(pendulum, x0, N_t, dt, t_transient)
+#sol = trajectory(pendulum, x0, N_t, dt, t_transient)
 
-gsr = GeneticSymReg(sol, collect(t_transient:dt:t_transient + N_t * dt); niter=50, maxsize=30, maxdepth=30)
-save_gsr(gsr, "../models/genetic_node_cat.ser")
+#gsr = GeneticSymReg(sol, collect(t_transient:dt:t_transient + N_t * dt); niter=50, maxsize=30, maxdepth=30)
+gsr = load_gsr("../models/genetic_pi_2.ser")
 
 using NeuralODE
 
-train_data, valid_data = generate_train_data(pendulum, 2, x0; N_t=N_t, dt=dt, t_transient=t_transient, valid_set=0.5)
+train_data, valid_data = generate_train_data(pendulum, 2, x0; N_t=N_t, dt=dt, t_transient=t_transient, periodic=true, valid_set=0.5)
 
-p, re_nn = NODE_ANN(6,2,64,2)
+p, re_nn = NODE_ANN(6,2,64,3,activation=tanh)
 
 function node(du, u, p, t)
     θ₁, θ₂, ω₁, ω₂ = u
@@ -49,9 +49,9 @@ import SciMLSensitivity: BacksolveAdjoint, ReverseDiffVJP
 import SciMLBase: FullSpecialize
 node_prob = ODEProblem{true, FullSpecialize}(node, x0, (Float32(0.),Float32(dt)), p)
 
-model = NODE(node_prob, sensealg=BacksolveAdjoint(;autojacvec = ReverseDiffVJP(true),))
+model = NODE(node_prob, trafo=pendulum_periodic, sensealg=BacksolveAdjoint(;autojacvec = ReverseDiffVJP(true),))
 
-train_losses, valid_losses = train_NODE(model, train_data, epochs; valid_data=valid_data, re_nn=re_nn, η=1f-3, decay=1f-6, print_every=5, save_every=50, savefile="../models/genetic_node_cat")
+train_losses, valid_losses = train_NODE(model, train_data, epochs; loss=pendulum_loss, valid_data=valid_data, re_nn=re_nn, η=1f-3, decay=1f-6, print_every=5, save_every=50, savefile="../models/genetic_node_cat")
 
 using DelimitedFiles
 

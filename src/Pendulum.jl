@@ -17,7 +17,7 @@ function trajectory(model::AbstractDSmodel, x0, N_t=500, dt=0.1f0, t_transient=0
 end
 
 #Generate training data for a given DynamicalSystem which may be used to train a NeuralODE
-function generate_train_data(model::AbstractDSmodel, series_length, x0; N_t=500, dt=0.1, t_transient=0, periodic=true, valid_set=nothing)
+function generate_train_data(model::AbstractDSmodel, series_length, x0; N_t=500, dt=0.1, t_transient=0, periodic=false, valid_set=nothing)
     t_train = t_transient:dt:t_transient+N_t*dt
     sol = trajectory(model, x0, N_t, dt, t_transient)
     data_train = Array(sol(t_train))
